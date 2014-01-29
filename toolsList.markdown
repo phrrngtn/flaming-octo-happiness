@@ -1,5 +1,7 @@
 Here's what i'm using
+=====================
 
+# Tools
 
 [Codekit](http://incident57.com/codekit/index.php) for watching all the code and compiling everything anytime something changes. Particularly useful with includes for LESS or SASS. But also useable with CoffeeScript, JavaScript minification and so forth
 
@@ -18,3 +20,12 @@ i use MAMP so that i can run Wordpress on mySQL but that prolly won't matter to 
 i use Safari with Developer tools enabled (preferences->Advanced tab->tickbox on bottom)
 
 i use Firefox with Firebug plugin when i really need to debug JS and AJAX
+
+
+# Code and Frameworks
+
+jQuery, Bootstrap, of course. I want to try mixing Bootstrap with angularJS using [this](http://angular-ui.github.io/bootstrap/) 
+
+FontAwesome and The Noun Project are great (links to come or just Google them). i like TypeKit for custom fonts, they can really make a difference to a site. Basically, because of retina displays & responsive design it seems better to me to eschew graphics in the basic site design (as opposed to D3 or whatever, where the graphics are the content). 
+
+
