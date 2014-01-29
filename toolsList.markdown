@@ -9,4 +9,12 @@ Here's what i'm using
 
 Editing: i use [Espresso](http://www.macrabbit.com/espresso/) but i can't honestly say if it's better than Sublime Text or Coda. I use it because i used CSSEdit which is now a part of espresso and i find that to be essential for what i do. I will say that if you are typing HTML AT ALL you need to be using [zen coding](http://docs.emmet.io) which is supported by all these editors. 
 
-Barça game is about to restart...more later
+i use iTerm2 FWIW, very minor improvement over basic terminal (tabs, essentially)
+
+i use a plugin for the finder called Go2Shell
+
+i use MAMP so that i can run Wordpress on mySQL but that prolly won't matter to you
+
+i use Safari with Developer tools enabled (preferences->Advanced tab->tickbox on bottom)
+
+i use Firefox with Firebug plugin when i really need to debug JS and AJAX
