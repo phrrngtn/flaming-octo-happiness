@@ -11,6 +11,10 @@ Here's what i'm using
 
 Editing: i use [Espresso](http://www.macrabbit.com/espresso/) but i can't honestly say if it's better than Sublime Text or Coda. I use it because i used CSSEdit which is now a part of espresso and i find that to be essential for what i do. I will say that if you are typing HTML AT ALL you need to be using [zen coding](http://docs.emmet.io) which is supported by all these editors. 
 
+Merging: i think my preferred merge tool is [DiffMerge](https://sourcegear.com/diffmerge/) but i recall that the xCode one had some features that i preferred. Not in love with any merge tool so far.
+
+Diffs: i use [Kaleidoscope](http://www.kaleidoscopeapp.com) - i have never upgraded from version 1
+
 i use iTerm2 FWIW, very minor improvement over basic terminal (tabs, essentially)
 
 i use a plugin for the finder called Go2Shell
@@ -26,6 +30,6 @@ i use Firefox with Firebug plugin when i really need to debug JS and AJAX
 
 jQuery, Bootstrap, of course. I want to try mixing Bootstrap with angularJS using [this](http://angular-ui.github.io/bootstrap/) 
 
-FontAwesome and The Noun Project are great (links to come or just Google them). i like TypeKit for custom fonts, they can really make a difference to a site. Basically, because of retina displays & responsive design it seems better to me to eschew graphics in the basic site design (as opposed to D3 or whatever, where the graphics are the content). 
+[FontAwesome](http://fontawesome.io) and [The Noun Project](http://thenounproject.com) are great. i like TypeKit for custom fonts, they can really make a difference to a site. Basically, because of retina displays & responsive design it seems better to me to eschew graphics in the basic site design (as opposed to D3 or whatever, where the graphics are the content). And because of this typography / iconography (and color, obvs) can help a great deal.
 
 
