@@ -2,6 +2,16 @@
 -- The parameter_domain values were obtained from a cross product of the domains of each variable (i.e. modelling_domain and kind) and then attempting to construct
 -- a library and filtering out any pair that caused an exception
 
+/*
+class FdwLibrary(ForeignDataWrapper):
+    def __init__(self, options, columns):
+        super(FdwLibrary, self).__init__(options, columns)
+        self.columns = columns
+        self.options = options.copy()
+        self.library = self.options['library']
+
+*/
+
 CREATE foreign table "foobar.LoadingsLib" -- we use the symbol of the callable to create the library as the name of the table.
 ( id integer, -- from the axes
   date date,  -- from the axes
