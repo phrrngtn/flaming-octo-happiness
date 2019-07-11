@@ -28,7 +28,7 @@ CREATE foreign table "foobar.LoadingsLib" -- we use the symbol of the callable t
     axes '[{"dtype": "date:date[Basic/day]", "name": "date"},{"dtype": "id:integer", "name": "id"}]', -- axes as JSON-encoded metadata
     -- A list of all legitimate parameter tuples
     parameter_domain '[["D","COMPUTED"], ["D, "HISTORICAL"], ["G", "COMPUTED"],
-     ["G","HISTORICAL"], ["GOPT", "HISTORICAL"], ["JC", "COMPUTED"],
+     ["G","HISTORICAL"], ["GO", "HISTORICAL"], ["JC", "COMPUTED"],
      ["J","HISTORICAL"], ["JO", "HISTORICAL"], ["US", "COMPUTED"],
      ["U", "HISTORICAL"], ["UO", "HISTORICAL"]]'
 );
