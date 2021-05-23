@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout
 from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEngineProfile, QWebEnginePage
 from PyQt5.QtWebChannel import QWebChannel
-from PyQt5.QtCore import pyqtSlot
+from PyQt5.QtCore import pyqtSlot, QSize
 import sys
 
 class BrowserQtWiget(QWidget):
@@ -23,7 +23,7 @@ class BrowserQtWiget(QWidget):
         self.page.setHtml("""
             <html>
                 <head>
-                    <meta charset="utf-8"/>        
+                    <meta charset="utf-8"/>
                     <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
                 </head>
                 <body>
@@ -42,7 +42,7 @@ class BrowserQtWiget(QWidget):
                         new QWebChannel(qt.webChannelTransport, function (channel) {
                             backend = channel.objects.backend;
                         });
-                
+
                         document.getElementById("button").addEventListener("click", function(){
                             backend.on_button_clicked();
                         });
@@ -61,6 +61,11 @@ class BrowserQtWiget(QWidget):
     @pyqtSlot()
     def on_button_clicked(self):
         print("Button clicked!")
+
+
+    def sizeHint(self):
+        # as per https://wiki.python.org/moin/PyQt/Creating%20a%20widget%20with%20a%20fixed%20aspect%20ratio
+        return QSize(900, 600)
 
 
 def open_browser(*args):
