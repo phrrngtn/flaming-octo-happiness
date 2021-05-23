@@ -28,9 +28,14 @@ class BrowserQtWiget(QWidget):
                 </head>
                 <body>
                     <h1>Hello!</h1>
+                   <a href="javascript:alert('Hello World!');">Execute JavaScript</a>
+                   <p>
+                    <a href="https://www.w3schools.com"> I am a test link</a>
+
                     <div>
                         <button id="button">Click Me</button>
                     </div>
+
                     <script>
                         // Hookup the button click event to our Python object
                         var backend;
