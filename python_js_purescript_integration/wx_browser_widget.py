@@ -67,15 +67,6 @@ class BrowserQtWiget(QWidget):
         # as per https://wiki.python.org/moin/PyQt/Creating%20a%20widget%20with%20a%20fixed%20aspect%20ratio
         return QSize(900, 600)
 
-
-def open_browser(*args):
-    app = QApplication.instance()
-    if app is None:
-        app = QApplication([sys.executable])
-
-    browser = BrowserQtWiget()
-    create_ctp(browser)
-
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     widget = BrowserQtWiget()
