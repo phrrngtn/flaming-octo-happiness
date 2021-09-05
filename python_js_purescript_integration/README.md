@@ -17,23 +17,29 @@ pyenv is used as a kind of _switcher_ to help with having multiple revisions of 
 pyenv install --list
 pyenv install 3.9.4
 ```
-This will install it to a user-specific path like this one.
+This will install it to a user-specific path like this one:
 ```shell
 /Users/phrrngtn/.pyenv/versions/3.9.4
 ```
+In the interest of making the stuff copy-and-pastable, I will write the path using tilde(~) and assume that the shell you are using expands that out to your home directory. In any case, the commands reproduced here are intended to be illustrative only. You may have to run additional ones or some variants. In summary, we need these toolchains:
+- Xcode
+- brew
+- pyenv
+- virtualenv
+- pip
 
 First thing we do is upgrade the pip installation itself
 ```shell
-/Users/phrrngtn/.pyenv/versions/3.9.4/bin/python3.9 -m pip install --upgrade pip
+~/.pyenv/versions/3.9.4/bin/python3.9 -m pip install --upgrade pip
 ```
 Now virtualenv
 ```shell
-/Users/phrrngtn/.pyenv/versions/3.9.4/bin/pip install virtualenv
+~/.pyenv/versions/3.9.4/bin/pip install virtualenv
 ```
 
 now we  create a virtual environment for our tests
 ```shell
-/Users/phrrngtn/.pyenv/versions/3.9.4/bin/virtualenv wx_test
+~/.pyenv/versions/3.9.4/bin/virtualenv wx_test
 source wx_test/bin/activate
 ```
 This will install the various stuff into the Python virtual environment. We will do the equivalent automatically by listing the actual dependencies in a setup.py file
