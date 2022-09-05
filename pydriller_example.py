@@ -6,6 +6,10 @@ from pathlib import Path
 
 import json
 
+repo = Path("/work/flaming-octo-happiness")
+start_sha = "9df29d224fffc5e58d4f85bfdac4487b4c16ef86"
+mailmap = repo / "mailmap.txt"
+
 
 def mailmap_as_dict(mailmap_path):
     # parse mailmap file to a dictionary of
@@ -13,7 +17,7 @@ def mailmap_as_dict(mailmap_path):
     # so that when we compute any stats on the commit log, we can bucket everything by
     # proper_email (i.e. use it as a key)
     mailmap_re = re.compile(
-        r"""(?P<proper_name>[^<]+)\s+<(?P<proper_email>[^>]+)>(?P<commit_name>\s+[^<]+)?\s+<(?P<commit_email>[^>]+)>"""
+        r"""(?P<proper_name>[^<]+)\s+<(?P<proper_email>[^>]+)>\s*(?P<commit_name>[^<]+)?\s+<(?P<commit_email>[^>]+)>"""
     )
     # skip over blank lines and lines starting with a #
     mailmap_dict = {}
@@ -24,7 +28,10 @@ def mailmap_as_dict(mailmap_path):
         md = mailmap_re.search(line).groupdict()
         if md:
             # note that the re is not 100% correct with whitespace
-            mailmap_dict[(md["commit_email"], md["commit_name"].strip())] = (
+            commit_name = md["commit_name"]
+            if commit_name:
+                commit_name = commit_name.strip()
+            mailmap_dict[(md["commit_email"], commit_name)] = (
                 md["proper_email"],
                 md["proper_name"],
             )
@@ -32,18 +39,20 @@ def mailmap_as_dict(mailmap_path):
     return mailmap_dict
 
 
-mailmap = Path("/work/flaming-octo-happiness/mailmap.txt")
 mailmap_dict = mailmap_as_dict(mailmap)
 
 commits = []
 # the from_commit gives us a way of 'tailing the log'
 # we have to use islice because traverse_commits returns a generator
+# We start at 1 since we don't want to re-process the commit we used as the
+# starting point.
 
 # this code is accumulating a multi-tree of changes since a particular
 # commit (which we will likely obtain on the basis of some ranking (ROW_NUMBER() OVER
 # (PARTITION BY repository, ts, rn_within_chunk))
+
 for commit in islice(
-    Repository("/work/flaming-octo-happiness/").traverse_commits(),
+    Repository(str(repo), from_commit=start_sha).traverse_commits(),
     1,
     None,
 ):
@@ -94,13 +103,13 @@ for commit in islice(
 # log in the first place.
 print(json.dumps(commits))
 
-# now we traverse over the commits but this time mapping commit e-mails and names
-# to proper e-mails and names.
-for c in commits:
-    commit_t = (
-        c["author_email"],
-        c["author_name"],
-    )
-    if commit_t in mailmap_dict:
-        proper_t = mailmap_dict[commit_t]
-        print(f"mapping {commit_t} to {proper_t}")
+# # now we traverse over the commits but this time mapping commit e-mails and names
+# # to proper e-mails and names.
+# for c in commits:
+#     commit_t = (
+#         c["author_email"],
+#         c["author_name"],
+#     )
+#     if commit_t in mailmap_dict:
+#         proper_t = mailmap_dict[commit_t]
+#         print(f"mapping {commit_t} to {proper_t}")
