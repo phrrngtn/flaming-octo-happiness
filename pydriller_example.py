@@ -6,8 +6,34 @@ from pathlib import Path
 
 import json
 
-# use mailmap
-mailmap_re = r"""(?P<proper_name>[^<]+)\s+<(?P<proper_email>[^>]+)>(?P<commit_name>\s+[^<]+)?\s+<(?P<commit_email>[^>]+)>"""
+
+def mailmap_as_dict(mailmap_path):
+    # parse mailmap file to a dictionary of
+    # (commit_email, commit_name) -> (proper_email, proper_name)
+    # so that when we compute any stats on the commit log, we can bucket everything by
+    # proper_email (i.e. use it as a key)
+    mailmap_re = re.compile(
+        r"""(?P<proper_name>[^<]+)\s+<(?P<proper_email>[^>]+)>(?P<commit_name>\s+[^<]+)?\s+<(?P<commit_email>[^>]+)>"""
+    )
+    # skip over blank lines and lines starting with a #
+    mailmap_dict = {}
+    for line in filter(
+        lambda l: not (l[0] == "#" or len(l) == 0),
+        [l.rstrip() for l in mailmap_path.open()],
+    ):
+        md = mailmap_re.search(line).groupdict()
+        if md:
+            # note that the re is not 100% correct with whitespace
+            mailmap_dict[(md["commit_email"], md["commit_name"].strip())] = (
+                md["proper_email"],
+                md["proper_name"],
+            )
+
+    return mailmap_dict
+
+
+mailmap = Path("/work/flaming-octo-happiness/mailmap.txt")
+mailmap_dict = mailmap_as_dict(mailmap)
 
 commits = []
 # the from_commit gives us a way of 'tailing the log'
@@ -64,3 +90,14 @@ for commit in islice(
 # reconstruct the relational database equivalent representation of that cumulative set of
 # intervals in a mechanical manner.
 print(json.dumps(commits))
+
+# now we traverse over the commits but this time mapping commit e-mails and names
+# to proper e-mails and names.
+for c in commits:
+    commit_t = (
+        c["author_email"],
+        c["author_name"],
+    )
+    if commit_t in mailmap_dict:
+        proper_t = mailmap_dict[commit_t]
+        print(f"mapping {commit_t} to {proper_t}")
