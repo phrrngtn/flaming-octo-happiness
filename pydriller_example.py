@@ -17,9 +17,7 @@ commits = []
 # commit (which we will likely obtain on the basis of some ranking (ROW_NUMBER() OVER
 # (PARTITION BY repository, ts, rn_within_chunk))
 for commit in islice(
-    Repository(
-        "/work/git-of-theseus/", from_commit="39d27630a4543b24f0110564549f8fcbe597c5eb"
-    ).traverse_commits(),
+    Repository("/work/flaming-octo-happiness/").traverse_commits(),
     1,
     None,
 ):
