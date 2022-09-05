@@ -89,6 +89,9 @@ for commit in islice(
 # write the contents of that interval as a scalar and be confident that you can
 # reconstruct the relational database equivalent representation of that cumulative set of
 # intervals in a mechanical manner.
+
+# there seems to be some idea of *inverting* the log into the set of facts that generated the
+# log in the first place.
 print(json.dumps(commits))
 
 # now we traverse over the commits but this time mapping commit e-mails and names
