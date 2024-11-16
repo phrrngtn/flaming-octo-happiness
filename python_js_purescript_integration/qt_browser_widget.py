@@ -1,16 +1,19 @@
 import sys
 
 
-from PyQt5 import QtGui, QtWidgets, QtCore
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout
-from PyQt5.QtCore import pyqtSignal as Signal, QSize, pyqtSlot
-from PyQt5.QtWebChannel import QWebChannel
-from PyQt5.QtWebEngineWidgets import (
+from PySide6 import QtGui, QtWidgets, QtCore
+from PySide6.QtWidgets import QApplication, QWidget, QVBoxLayout
+from PySide6.QtCore import Signal, QSize, Slot
+from PySide6.QtWebChannel import QWebChannel
+
+from PySide6.QtWebEngineWidgets import  QWebEngineView
+
+from PySide6.QtWebEngineCore import (
     QWebEngineSettings,
-    QWebEngineView,
     QWebEnginePage,
     QWebEngineProfile,
 )
+
 
 
 class BrowserQtWiget(QWidget):
@@ -68,7 +71,7 @@ class BrowserQtWiget(QWidget):
         layout.addWidget(self.browser)
         self.setLayout(layout)
 
-    @pyqtSlot()
+    @Slot()
     def on_button_clicked(self):
         print("Button clicked!")
 
