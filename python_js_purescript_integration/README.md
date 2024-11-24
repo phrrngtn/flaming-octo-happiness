@@ -15,11 +15,11 @@ pyenv is used as a kind of _switcher_ to help with having multiple revisions of 
 ```shell
 # See what revisions are available to install
 pyenv install --list
-pyenv install 3.9.4
+pyenv install 3.11.1
 ```
 This will install it to a user-specific path like this one:
 ```shell
-/Users/phrrngtn/.pyenv/versions/3.9.4
+/Users/phrrngtn/.pyenv/versions/3.11.1
 ```
 In the interest of making the stuff copy-and-pastable, I will write the path using tilde(~) and assume that the shell you are using expands that out to your home directory. In any case, the commands reproduced here are intended to be illustrative only. You may have to run additional ones or some variants. In summary, we need these toolchains:
 - Xcode
@@ -45,8 +45,8 @@ source wx_test/bin/activate
 This will install the various stuff into the Python virtual environment. We will do the equivalent automatically by listing the actual dependencies in a setup.py file
 
 ```shell
-pip install pyqt5 PyQtWebEngine
-pip install PySide2
+pip install PySide6 PySide6_Addons PySide6_Essentials
+pip install -U geopandas folium
 ```
 
 Always handy to have Jupyter!
