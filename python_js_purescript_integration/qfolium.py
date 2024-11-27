@@ -33,6 +33,7 @@ class FoliumSchemeHandler(QWebEngineUrlSchemeHandler):
         request.reply(b"text/html", buf)
 
 
+# From https://stackoverflow.com/a/64493467/40387
 class FoliumApplication(QtCore.QObject):
     scheme = b"folium"
 
