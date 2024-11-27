@@ -30,16 +30,13 @@ In the interest of making the stuff copy-and-pastable, I will write the path usi
 
 First thing we do is upgrade the pip installation itself
 ```shell
-~/.pyenv/versions/3.9.4/bin/python3.9 -m pip install --upgrade pip
+~/.pyenv/versions/3.11.1/bin/python3.9 -m pip install --upgrade pip
 ```
-Now virtualenv
-```shell
-~/.pyenv/versions/3.9.4/bin/pip install virtualenv
-```
+
 
 now we  create a virtual environment for our tests
 ```shell
-~/.pyenv/versions/3.9.4/bin/virtualenv wx_test
+~/.pyenv/versions/3.11.1/bin/python -mvenv wx_test
 source wx_test/bin/activate
 ```
 This will install the various stuff into the Python virtual environment. We will do the equivalent automatically by listing the actual dependencies in a setup.py file
