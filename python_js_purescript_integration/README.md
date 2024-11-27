@@ -2,42 +2,16 @@ Check that the xcode command line tools are installed:
 ```shell
 xcode-select -p
 ```
+We assume installation of Python from python.org which, if successful should place python executable in /usr/local/bin/python
 
-Now do some maintenance with brew
-
-```shell
-brew update
-brew install pyenv
-brew install cmake openssl readline sqlite3 xz zlib
-```
-
-pyenv is used as a kind of _switcher_ to help with having multiple revisions of Python installed.
-```shell
-# See what revisions are available to install
-pyenv install --list
-pyenv install 3.11.1
-```
-This will install it to a user-specific path like this one:
-```shell
-/Users/phrrngtn/.pyenv/versions/3.11.1
-```
 In the interest of making the stuff copy-and-pastable, I will write the path using tilde(~) and assume that the shell you are using expands that out to your home directory. In any case, the commands reproduced here are intended to be illustrative only. You may have to run additional ones or some variants. In summary, we need these toolchains:
 - Xcode
-- brew
-- pyenv
 - virtualenv
-- pip
-
-First thing we do is upgrade the pip installation itself
-```shell
-~/.pyenv/versions/3.11.1/bin/python3.9 -m pip install --upgrade pip
-```
-
 
 now we  create a virtual environment for our tests
 ```shell
-~/.pyenv/versions/3.11.1/bin/python -mvenv wx_test
-source wx_test/bin/activate
+/usr/local/bin/python3 -m venv qt_test
+source qt_test/bin/activate
 ```
 This will install the various stuff into the Python virtual environment. We will do the equivalent automatically by listing the actual dependencies in a setup.py file
 
@@ -53,5 +27,5 @@ jupyter notebook --ip 0.0.0.0
 ```
 run the program
 ```shell
-python qt_browser_widget.py
+python3 qt_browser_widget.py
 ```
