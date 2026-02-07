@@ -1,0 +1,1073 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Viewer with Annotations</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .controls {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .controls button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+
+        .controls button:hover {
+            background: #0056b3;
+        }
+
+        .controls button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .controls button.secondary {
+            background: #28a745;
+        }
+
+        .controls button.secondary:hover {
+            background: #1e7e34;
+        }
+
+        #file-input {
+            display: none;
+        }
+
+        .pdf-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            min-height: 600px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .pdf-page-container {
+            position: relative;
+            display: inline-block;
+            border: 1px solid #ddd;
+        }
+
+        #pdf-canvas {
+            display: block;
+        }
+
+        #annotation-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            pointer-events: auto;
+            overflow: visible;
+            transform-origin: top left;
+        }
+
+        .annotation-icon {
+            position: absolute;
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            background: #ffaa00;
+            border: 2px solid #cc8800;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            box-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .annotation-icon:hover {
+            transform: scale(1.1);
+            z-index: 100;
+        }
+
+        .annotation-icon .tooltip {
+            display: none;
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #333;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            white-space: nowrap;
+            max-width: 250px;
+            white-space: normal;
+            margin-bottom: 5px;
+            z-index: 1000;
+        }
+
+        .annotation-icon:hover .tooltip {
+            display: block;
+        }
+
+        .page-controls {
+            margin-top: 15px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .page-controls button {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .page-controls button:hover {
+            background: #545b62;
+        }
+
+        .page-controls button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        #page-info {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .placeholder {
+            color: #999;
+            font-size: 18px;
+            text-align: center;
+            padding: 100px 20px;
+        }
+
+        .annotation-info {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 20px;
+            width: 100%;
+            max-width: 800px;
+        }
+
+        .annotation-info h3 {
+            margin-top: 0;
+            color: #856404;
+        }
+
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status.info {
+            background: #cce5ff;
+            color: #004085;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>PDF Viewer with Annotations</h1>
+
+        <div class="controls">
+            <input type="file" id="file-input" accept=".pdf">
+            <button id="choose-file-btn">Choose PDF File</button>
+            <button id="log-annotations-btn" disabled>Log Annotations to Console</button>
+            <button id="add-highlight-btn" class="secondary" disabled>Add Highlight Annotation</button>
+            <button id="add-text-btn" class="secondary" disabled>Add Text Annotation</button>
+            <button id="add-freetext-btn" class="secondary" disabled>Add FreeText (Visible Text)</button>
+            <button id="add-link-btn" class="secondary" disabled>Add Link Annotation</button>
+            <button id="download-btn" class="secondary" disabled>Download Modified PDF</button>
+            <div id="status"></div>
+        </div>
+
+        <div class="pdf-container">
+            <div id="placeholder" class="placeholder">
+                Select a PDF file to view it here.<br>
+                Open the browser console (F12) to see annotation details.
+            </div>
+            <div id="pdf-page-container" class="pdf-page-container" style="display: none;">
+                <canvas id="pdf-canvas"></canvas>
+                <div id="annotation-layer"></div>
+            </div>
+            <div class="page-controls" style="display: none;">
+                <button id="prev-btn">Previous</button>
+                <span id="page-info">Page 1 of 1</span>
+                <button id="next-btn">Next</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PDF.js from CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+
+    <!-- pdf-lib from CDN for creating/modifying PDFs -->
+    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+
+    <script>
+        // Set the worker source for PDF.js
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+        // Application state
+        let pdfDoc = null;
+        let pageNum = 1;
+        let pageRendering = false;
+        let pageNumPending = null;
+        let scale = 1.5;
+        let originalPdfBytes = null;
+        let modifiedPdfBytes = null;
+
+        // DOM elements
+        const fileInput = document.getElementById('file-input');
+        const chooseFileBtn = document.getElementById('choose-file-btn');
+        const logAnnotationsBtn = document.getElementById('log-annotations-btn');
+        const addHighlightBtn = document.getElementById('add-highlight-btn');
+        const addTextBtn = document.getElementById('add-text-btn');
+        const addFreetextBtn = document.getElementById('add-freetext-btn');
+        const addLinkBtn = document.getElementById('add-link-btn');
+        const downloadBtn = document.getElementById('download-btn');
+        const canvas = document.getElementById('pdf-canvas');
+        const ctx = canvas.getContext('2d');
+        const pdfPageContainer = document.getElementById('pdf-page-container');
+        const annotationLayer = document.getElementById('annotation-layer');
+        const placeholder = document.getElementById('placeholder');
+        const pageControls = document.querySelector('.page-controls');
+        const prevBtn = document.getElementById('prev-btn');
+        const nextBtn = document.getElementById('next-btn');
+        const pageInfo = document.getElementById('page-info');
+        const statusDiv = document.getElementById('status');
+
+        // Show status message
+        function showStatus(message, type = 'info') {
+            statusDiv.className = `status ${type}`;
+            statusDiv.textContent = message;
+            statusDiv.style.display = 'block';
+        }
+
+        // Render a specific page
+        function renderPage(num) {
+            pageRendering = true;
+
+            pdfDoc.getPage(num).then(async function(page) {
+                const viewport = page.getViewport({ scale: scale });
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+
+                // Set annotation layer size to match canvas
+                annotationLayer.style.width = `${viewport.width}px`;
+                annotationLayer.style.height = `${viewport.height}px`;
+
+                const renderContext = {
+                    canvasContext: ctx,
+                    viewport: viewport
+                };
+
+                const renderTask = page.render(renderContext);
+
+                renderTask.promise.then(function() {
+                    pageRendering = false;
+                    if (pageNumPending !== null) {
+                        renderPage(pageNumPending);
+                        pageNumPending = null;
+                    }
+                });
+
+                // Render annotation icons for Text annotations
+                await renderAnnotationLayer(page, viewport);
+            });
+
+            pageInfo.textContent = `Page ${num} of ${pdfDoc.numPages}`;
+        }
+
+        // Render annotation icons on the annotation layer
+        async function renderAnnotationLayer(page, viewport) {
+            // Clear existing annotation icons
+            annotationLayer.innerHTML = '';
+
+            const annotations = await page.getAnnotations();
+
+            // Log annotation structure for debugging
+            console.log('Annotations on page:', annotations);
+
+            // Counter for stamps without text labels
+            let stampIndex = 0;
+
+            annotations.forEach((annot, index) => {
+                // Log full annotation object to inspect available properties
+                if (annot.subtype === 'Stamp') {
+                    console.log(`Stamp annotation ${index}:`, annot);
+                    console.log('  - rect:', annot.rect);
+                    console.log('  - contents:', annot.contents);
+                    console.log('  - contentsObj:', annot.contentsObj);
+                    console.log('  - title:', annot.title);
+                    console.log('  - name:', annot.name);
+                    console.log('  - fieldValue:', annot.fieldValue);
+                    console.log('  - alternativeText:', annot.alternativeText);
+                }
+
+                const rect = annot.rect;
+                if (!rect) return;
+
+                // PDF rect is [x1, y1, x2, y2] in PDF coordinate space (origin bottom-left)
+                // We need to convert to canvas/viewport coordinates (origin top-left)
+                const pdfX1 = rect[0];
+                const pdfY1 = rect[1];
+                const pdfX2 = rect[2];
+                const pdfY2 = rect[3];
+
+                // Apply viewport transform to convert PDF coords to canvas coords
+                const canvasX = pdfX1 * scale;
+                const canvasY = (viewport.height / scale - pdfY2) * scale; // Flip Y axis
+                const canvasWidth = (pdfX2 - pdfX1) * scale;
+                const canvasHeight = (pdfY2 - pdfY1) * scale;
+
+                console.log(`Annotation ${annot.subtype} position: PDF(${pdfX1}, ${pdfY1}) -> Canvas(${canvasX}, ${canvasY})`);
+
+                // Render Highlight annotations as semi-transparent overlays
+                if (annot.subtype === 'Highlight') {
+                    const highlight = document.createElement('div');
+                    highlight.className = 'highlight-annotation';
+                    highlight.style.position = 'absolute';
+                    highlight.style.left = `${canvasX}px`;
+                    highlight.style.top = `${canvasY}px`;
+                    highlight.style.width = `${canvasWidth}px`;
+                    highlight.style.height = `${canvasHeight}px`;
+                    highlight.style.backgroundColor = 'rgba(255, 255, 0, 0.4)';
+                    highlight.style.pointerEvents = 'none';
+                    highlight.style.mixBlendMode = 'multiply';
+
+                    // Add tooltip if there's content
+                    if (annot.contents) {
+                        highlight.style.pointerEvents = 'auto';
+                        highlight.style.cursor = 'pointer';
+                        highlight.title = annot.contents;
+                    }
+
+                    annotationLayer.appendChild(highlight);
+                }
+
+                // Render icons for Text (sticky note) annotations
+                if (annot.subtype === 'Text') {
+                    const icon = document.createElement('div');
+                    icon.className = 'annotation-icon';
+                    icon.style.left = `${canvasX}px`;
+                    icon.style.top = `${canvasY}px`;
+                    icon.innerHTML = '💬';
+
+                    // Add tooltip with annotation content
+                    if (annot.contents) {
+                        const tooltip = document.createElement('div');
+                        tooltip.className = 'tooltip';
+                        tooltip.textContent = annot.contents;
+                        icon.appendChild(tooltip);
+                    }
+
+                    annotationLayer.appendChild(icon);
+                }
+
+                // Render FreeText annotations as text boxes
+                if (annot.subtype === 'FreeText') {
+                    const textBox = document.createElement('div');
+                    textBox.className = 'freetext-annotation';
+                    textBox.style.position = 'absolute';
+                    textBox.style.left = `${canvasX}px`;
+                    textBox.style.top = `${canvasY}px`;
+                    textBox.style.width = `${canvasWidth}px`;
+                    textBox.style.minHeight = `${canvasHeight}px`;
+                    textBox.style.backgroundColor = 'rgba(255, 255, 220, 0.95)';
+                    textBox.style.border = '1px solid #e0a000';
+                    textBox.style.borderRadius = '3px';
+                    textBox.style.padding = '4px 8px';
+                    textBox.style.fontSize = '12px';
+                    textBox.style.fontFamily = 'Helvetica, Arial, sans-serif';
+                    textBox.style.color = '#333';
+                    textBox.style.boxShadow = '1px 1px 3px rgba(0,0,0,0.2)';
+                    textBox.textContent = annot.contents || 'FreeText';
+
+                    annotationLayer.appendChild(textBox);
+                }
+
+                // Render Link annotations as clickable areas
+                if (annot.subtype === 'Link') {
+                    const link = document.createElement('a');
+                    link.className = 'link-annotation';
+                    link.style.position = 'absolute';
+                    link.style.left = `${canvasX}px`;
+                    link.style.top = `${canvasY}px`;
+                    link.style.width = `${canvasWidth}px`;
+                    link.style.height = `${canvasHeight}px`;
+                    link.style.border = '2px dashed rgba(0, 0, 255, 0.5)';
+                    link.style.backgroundColor = 'rgba(0, 0, 255, 0.1)';
+                    link.style.cursor = 'pointer';
+                    link.style.display = 'flex';
+                    link.style.alignItems = 'center';
+                    link.style.justifyContent = 'center';
+                    link.style.fontSize = '11px';
+                    link.style.color = '#0000cc';
+                    link.style.textDecoration = 'underline';
+                    link.style.borderRadius = '3px';
+
+                    // Get the URL from the annotation's action
+                    let url = '#';
+                    if (annot.url) {
+                        url = annot.url;
+                    } else if (annot.unsafeUrl) {
+                        url = annot.unsafeUrl;
+                    }
+
+                    link.href = url;
+                    link.target = '_blank';
+                    link.rel = 'noopener noreferrer';
+                    link.textContent = '🔗 Link';
+                    link.title = `Click to open: ${url}`;
+
+                    annotationLayer.appendChild(link);
+                }
+
+                // Render icons for Stamp annotations with their text label
+                if (annot.subtype === 'Stamp') {
+                    stampIndex++;
+
+                    // Get the stamp text from various possible properties
+                    // Fall back to numbered index if no text is available
+                    let stampText = '';
+                    if (annot.contentsObj && annot.contentsObj.str && annot.contentsObj.str.trim()) {
+                        stampText = annot.contentsObj.str;
+                    } else if (annot.contents && annot.contents.trim()) {
+                        stampText = annot.contents;
+                    } else if (annot.title && annot.title.trim()) {
+                        stampText = annot.title;
+                    } else if (annot.alternativeText && annot.alternativeText.trim()) {
+                        stampText = annot.alternativeText;
+                    } else if (annot.fieldValue) {
+                        stampText = annot.fieldValue;
+                    } else {
+                        // Fall back to numbered index
+                        stampText = String(stampIndex);
+                    }
+
+                    const icon = document.createElement('div');
+                    icon.className = 'annotation-icon stamp-annotation';
+                    // Position at the top-left corner of the stamp
+                    icon.style.left = `${canvasX}px`;
+                    icon.style.top = `${canvasY}px`;
+                    icon.style.background = '#4a90d9';
+                    icon.style.borderColor = '#2e6bb0';
+                    icon.style.color = 'white';
+                    icon.style.fontWeight = 'bold';
+                    icon.style.minWidth = '24px';
+                    icon.style.width = 'auto';
+                    icon.style.padding = '2px 6px';
+                    icon.textContent = stampText;
+
+                    // Add tooltip with full annotation details
+                    const tooltip = document.createElement('div');
+                    tooltip.className = 'tooltip';
+                    tooltip.textContent = `Stamp ${stampIndex}: ${stampText}`;
+                    icon.appendChild(tooltip);
+
+                    annotationLayer.appendChild(icon);
+                }
+            });
+        }
+
+        // Queue page rendering
+        function queueRenderPage(num) {
+            if (pageRendering) {
+                pageNumPending = num;
+            } else {
+                renderPage(num);
+            }
+        }
+
+        // Go to previous page
+        function onPrevPage() {
+            if (pageNum <= 1) return;
+            pageNum--;
+            queueRenderPage(pageNum);
+        }
+
+        // Go to next page
+        function onNextPage() {
+            if (pageNum >= pdfDoc.numPages) return;
+            pageNum++;
+            queueRenderPage(pageNum);
+        }
+
+        // Read and log all annotations from the PDF
+        async function logAnnotations() {
+            if (!pdfDoc) return;
+
+            console.log('='.repeat(60));
+            console.log('PDF ANNOTATIONS REPORT');
+            console.log('='.repeat(60));
+            console.log(`Total pages: ${pdfDoc.numPages}`);
+            console.log('');
+
+            let totalAnnotations = 0;
+
+            for (let i = 1; i <= pdfDoc.numPages; i++) {
+                const page = await pdfDoc.getPage(i);
+                const annotations = await page.getAnnotations();
+
+                if (annotations.length > 0) {
+                    console.log(`--- Page ${i} ---`);
+                    console.log(`Found ${annotations.length} annotation(s):`);
+
+                    annotations.forEach((annot, index) => {
+                        totalAnnotations++;
+                        console.log('');
+                        console.log(`  Annotation ${index + 1}:`);
+                        console.log(`    Type: ${annot.subtype}`);
+                        console.log(`    ID: ${annot.id}`);
+
+                        if (annot.rect) {
+                            console.log(`    Rectangle: [${annot.rect.map(n => n.toFixed(2)).join(', ')}]`);
+                        }
+
+                        if (annot.contents) {
+                            console.log(`    Contents: "${annot.contents}"`);
+                        }
+
+                        if (annot.title) {
+                            console.log(`    Title/Author: "${annot.title}"`);
+                        }
+
+                        if (annot.color) {
+                            console.log(`    Color: RGB(${annot.color.map(c => Math.round(c * 255)).join(', ')})`);
+                        }
+
+                        if (annot.modificationDate) {
+                            console.log(`    Modified: ${annot.modificationDate}`);
+                        }
+
+                        if (annot.creationDate) {
+                            console.log(`    Created: ${annot.creationDate}`);
+                        }
+
+                        // Log the full annotation object for detailed inspection
+                        console.log(`    Full annotation object:`, annot);
+                    });
+                    console.log('');
+                }
+            }
+
+            if (totalAnnotations === 0) {
+                console.log('No annotations found in this PDF.');
+            } else {
+                console.log('='.repeat(60));
+                console.log(`Total annotations found: ${totalAnnotations}`);
+            }
+            console.log('='.repeat(60));
+
+            showStatus(`Found ${totalAnnotations} annotation(s). Check the browser console (F12) for details.`, 'success');
+        }
+
+        // Add a highlight annotation using pdf-lib
+        async function addHighlightAnnotation() {
+            if (!originalPdfBytes) return;
+
+            try {
+                const { PDFDocument, PDFName, PDFArray, PDFNumber, PDFString } = PDFLib;
+
+                // Make a copy of the bytes to avoid issues
+                const bytesToLoad = modifiedPdfBytes
+                    ? new Uint8Array(modifiedPdfBytes)
+                    : new Uint8Array(originalPdfBytes);
+
+                // Load the PDF with pdf-lib with options for better compatibility
+                const pdfLibDoc = await PDFDocument.load(bytesToLoad, {
+                    ignoreEncryption: true,
+                    updateMetadata: false
+                });
+                const pages = pdfLibDoc.getPages();
+                const firstPage = pages[0];
+                const { width, height } = firstPage.getSize();
+
+                // Create a real highlight annotation
+                const highlightX = 50;
+                const highlightY = height - 100;
+                const highlightWidth = 200;
+                const highlightHeight = 20;
+
+                // Create the annotation dictionary
+                const highlightAnnot = pdfLibDoc.context.obj({
+                    Type: 'Annot',
+                    Subtype: 'Highlight',
+                    Rect: [highlightX, highlightY, highlightX + highlightWidth, highlightY + highlightHeight],
+                    Contents: PDFString.of('Highlighted text region'),
+                    C: [1, 1, 0], // Yellow color
+                    CA: 0.5, // Opacity
+                    T: PDFString.of('PDF Viewer App'),
+                    M: PDFString.of(`D:${new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14)}Z`),
+                    // QuadPoints define the highlight shape (required for Highlight annotations)
+                    QuadPoints: [
+                        highlightX, highlightY + highlightHeight,
+                        highlightX + highlightWidth, highlightY + highlightHeight,
+                        highlightX, highlightY,
+                        highlightX + highlightWidth, highlightY
+                    ],
+                });
+
+                // Add the annotation to the page
+                const highlightAnnotRef = pdfLibDoc.context.register(highlightAnnot);
+
+                // Get existing annotations array or create new one
+                let annotsArray;
+                const existingAnnots = firstPage.node.get(PDFName.of('Annots'));
+
+                if (existingAnnots) {
+                    // Dereference if it's a reference, then convert to mutable array
+                    const lookedUp = pdfLibDoc.context.lookup(existingAnnots);
+                    if (lookedUp && lookedUp.asArray) {
+                        // It's a PDFArray - get its elements and create a new array with our addition
+                        const existingRefs = lookedUp.asArray();
+                        annotsArray = pdfLibDoc.context.obj([...existingRefs, highlightAnnotRef]);
+                    } else {
+                        annotsArray = pdfLibDoc.context.obj([highlightAnnotRef]);
+                    }
+                } else {
+                    annotsArray = pdfLibDoc.context.obj([highlightAnnotRef]);
+                }
+
+                firstPage.node.set(PDFName.of('Annots'), annotsArray);
+
+                console.log('='.repeat(60));
+                console.log('HIGHLIGHT ANNOTATION ADDED (Real PDF Annotation)');
+                console.log('='.repeat(60));
+                console.log(`Position: x=${highlightX}, y=${highlightY}`);
+                console.log(`Size: ${highlightWidth} x ${highlightHeight}`);
+                console.log(`Color: Yellow, Opacity: 50%`);
+                console.log(`Contents: "Highlighted text region"`);
+                console.log('='.repeat(60));
+
+                // Save the modified PDF (make a copy to avoid detached buffer issues)
+                const savedBytes = await pdfLibDoc.save();
+                modifiedPdfBytes = new Uint8Array(savedBytes);
+
+                // Reload in PDF.js to display (pass a copy)
+                await reloadPdf(new Uint8Array(modifiedPdfBytes));
+
+                showStatus('Highlight annotation added to page 1. Check console for details.', 'success');
+                downloadBtn.disabled = false;
+
+            } catch (error) {
+                console.error('Error adding highlight:', error);
+                console.error('PDF bytes length:', originalPdfBytes?.length);
+                console.error('First 10 bytes:', originalPdfBytes?.slice(0, 10));
+                const errorMsg = error.message.includes('No PDF header')
+                    ? 'This PDF format is not supported by pdf-lib. The PDF may use features that cannot be modified client-side.'
+                    : error.message;
+                showStatus('Error adding highlight: ' + errorMsg, 'info');
+            }
+        }
+
+        // Add a text annotation (comment/note) using pdf-lib
+        async function addTextAnnotation() {
+            if (!originalPdfBytes) return;
+
+            try {
+                const { PDFDocument, PDFName, PDFString } = PDFLib;
+
+                // Make a copy of the bytes to avoid issues
+                const bytesToLoad = modifiedPdfBytes
+                    ? new Uint8Array(modifiedPdfBytes)
+                    : new Uint8Array(originalPdfBytes);
+
+                // Load the PDF with options for better compatibility
+                const pdfLibDoc = await PDFDocument.load(bytesToLoad, {
+                    ignoreEncryption: true,
+                    updateMetadata: false
+                });
+                const pages = pdfLibDoc.getPages();
+                const firstPage = pages[0];
+                const { width, height } = firstPage.getSize();
+
+                // Create a real Text annotation (sticky note/comment)
+                const noteX = 100;
+                const noteY = height - 150;
+                const noteSize = 24; // Icon size
+
+                const annotationText = 'This is a sample text annotation (sticky note)!';
+                const timestamp = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);
+
+                // Create the annotation dictionary
+                const textAnnot = pdfLibDoc.context.obj({
+                    Type: 'Annot',
+                    Subtype: 'Text',
+                    Rect: [noteX, noteY, noteX + noteSize, noteY + noteSize],
+                    Contents: PDFString.of(annotationText),
+                    T: PDFString.of('PDF Viewer App'),
+                    M: PDFString.of(`D:${timestamp}Z`),
+                    C: [1, 0.8, 0], // Orange color
+                    Name: 'Comment', // Icon name: Comment, Note, Help, Insert, Key, NewParagraph, Paragraph
+                    Open: false, // Whether the popup is open by default
+                });
+
+                // Add the annotation to the page
+                const textAnnotRef = pdfLibDoc.context.register(textAnnot);
+
+                // Get existing annotations array or create new one
+                let annotsArray;
+                const existingAnnots = firstPage.node.get(PDFName.of('Annots'));
+
+                if (existingAnnots) {
+                    // Dereference if it's a reference, then convert to mutable array
+                    const lookedUp = pdfLibDoc.context.lookup(existingAnnots);
+                    if (lookedUp && lookedUp.asArray) {
+                        const existingRefs = lookedUp.asArray();
+                        annotsArray = pdfLibDoc.context.obj([...existingRefs, textAnnotRef]);
+                    } else {
+                        annotsArray = pdfLibDoc.context.obj([textAnnotRef]);
+                    }
+                } else {
+                    annotsArray = pdfLibDoc.context.obj([textAnnotRef]);
+                }
+
+                firstPage.node.set(PDFName.of('Annots'), annotsArray);
+
+                console.log('='.repeat(60));
+                console.log('TEXT ANNOTATION (STICKY NOTE) ADDED (Real PDF Annotation)');
+                console.log('='.repeat(60));
+                console.log(`Position: x=${noteX}, y=${noteY}`);
+                console.log(`Icon: Comment`);
+                console.log(`Contents: "${annotationText}"`);
+                console.log(`Author: "PDF Viewer App"`);
+                console.log('='.repeat(60));
+
+                // Save the modified PDF (make a copy to avoid detached buffer issues)
+                const savedBytes = await pdfLibDoc.save();
+                modifiedPdfBytes = new Uint8Array(savedBytes);
+
+                // Reload in PDF.js to display (pass a copy)
+                await reloadPdf(new Uint8Array(modifiedPdfBytes));
+
+                showStatus('Text annotation (sticky note) added to page 1. Check console for details.', 'success');
+                downloadBtn.disabled = false;
+
+            } catch (error) {
+                console.error('Error adding text annotation:', error);
+                console.error('PDF bytes length:', originalPdfBytes?.length);
+                const errorMsg = error.message.includes('No PDF header')
+                    ? 'This PDF format is not supported by pdf-lib. The PDF may use features that cannot be modified client-side.'
+                    : error.message;
+                showStatus('Error adding annotation: ' + errorMsg, 'info');
+            }
+        }
+
+        // Add a FreeText annotation (visible text on the page)
+        async function addFreeTextAnnotation() {
+            if (!originalPdfBytes) return;
+
+            try {
+                const { PDFDocument, PDFName, PDFString, rgb, StandardFonts } = PDFLib;
+
+                const bytesToLoad = modifiedPdfBytes
+                    ? new Uint8Array(modifiedPdfBytes)
+                    : new Uint8Array(originalPdfBytes);
+
+                const pdfLibDoc = await PDFDocument.load(bytesToLoad, {
+                    ignoreEncryption: true,
+                    updateMetadata: false
+                });
+                const pages = pdfLibDoc.getPages();
+                const firstPage = pages[0];
+                const { width, height } = firstPage.getSize();
+
+                // FreeText annotation parameters
+                const textX = 50;
+                const textY = height - 250;
+                const textWidth = 200;
+                const textHeight = 30;
+                const displayText = 'Sample FreeText Label';
+                const fontSize = 14;
+
+                // Create the FreeText annotation
+                const freeTextAnnot = pdfLibDoc.context.obj({
+                    Type: 'Annot',
+                    Subtype: 'FreeText',
+                    Rect: [textX, textY, textX + textWidth, textY + textHeight],
+                    Contents: PDFString.of(displayText),
+                    DA: PDFString.of(`/Helv ${fontSize} Tf 0 0 0 rg`), // Default appearance
+                    DS: PDFString.of(`font: bold ${fontSize}px Helvetica; color: #000000`),
+                    T: PDFString.of('PDF Viewer App'),
+                    M: PDFString.of(`D:${new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14)}Z`),
+                    C: [1, 0.9, 0.6], // Light orange border
+                    IC: [1, 1, 0.8], // Light yellow fill
+                    CA: 1,
+                    Border: [0, 0, 1],
+                });
+
+                const freeTextAnnotRef = pdfLibDoc.context.register(freeTextAnnot);
+
+                let annotsArray;
+                const existingAnnots = firstPage.node.get(PDFName.of('Annots'));
+
+                if (existingAnnots) {
+                    const lookedUp = pdfLibDoc.context.lookup(existingAnnots);
+                    if (lookedUp && lookedUp.asArray) {
+                        const existingRefs = lookedUp.asArray();
+                        annotsArray = pdfLibDoc.context.obj([...existingRefs, freeTextAnnotRef]);
+                    } else {
+                        annotsArray = pdfLibDoc.context.obj([freeTextAnnotRef]);
+                    }
+                } else {
+                    annotsArray = pdfLibDoc.context.obj([freeTextAnnotRef]);
+                }
+
+                firstPage.node.set(PDFName.of('Annots'), annotsArray);
+
+                console.log('='.repeat(60));
+                console.log('FREETEXT ANNOTATION ADDED');
+                console.log('='.repeat(60));
+                console.log(`Position: x=${textX}, y=${textY}`);
+                console.log(`Size: ${textWidth} x ${textHeight}`);
+                console.log(`Text: "${displayText}"`);
+                console.log('='.repeat(60));
+
+                const savedBytes = await pdfLibDoc.save();
+                modifiedPdfBytes = new Uint8Array(savedBytes);
+                await reloadPdf(new Uint8Array(modifiedPdfBytes));
+
+                showStatus('FreeText annotation added to page 1. Check console for details.', 'success');
+                downloadBtn.disabled = false;
+
+            } catch (error) {
+                console.error('Error adding FreeText annotation:', error);
+                showStatus('Error adding FreeText: ' + error.message, 'info');
+            }
+        }
+
+        // Add a Link annotation (clickable hyperlink)
+        async function addLinkAnnotation() {
+            if (!originalPdfBytes) return;
+
+            try {
+                const { PDFDocument, PDFName, PDFString, PDFArray } = PDFLib;
+
+                const bytesToLoad = modifiedPdfBytes
+                    ? new Uint8Array(modifiedPdfBytes)
+                    : new Uint8Array(originalPdfBytes);
+
+                const pdfLibDoc = await PDFDocument.load(bytesToLoad, {
+                    ignoreEncryption: true,
+                    updateMetadata: false
+                });
+                const pages = pdfLibDoc.getPages();
+                const firstPage = pages[0];
+                const { width, height } = firstPage.getSize();
+
+                // Link annotation parameters
+                const linkX = 50;
+                const linkY = height - 300;
+                const linkWidth = 150;
+                const linkHeight = 25;
+                const targetUrl = 'https://example.com';
+
+                // Create the URI action
+                const uriAction = pdfLibDoc.context.obj({
+                    Type: 'Action',
+                    S: 'URI',
+                    URI: PDFString.of(targetUrl),
+                });
+                const uriActionRef = pdfLibDoc.context.register(uriAction);
+
+                // Create the Link annotation
+                const linkAnnot = pdfLibDoc.context.obj({
+                    Type: 'Annot',
+                    Subtype: 'Link',
+                    Rect: [linkX, linkY, linkX + linkWidth, linkY + linkHeight],
+                    Contents: PDFString.of(`Link to ${targetUrl}`),
+                    A: uriActionRef, // Action to perform
+                    Border: [0, 0, 1], // Border with 1pt width
+                    C: [0, 0, 1], // Blue color
+                    H: 'I', // Highlight mode: Invert
+                });
+
+                const linkAnnotRef = pdfLibDoc.context.register(linkAnnot);
+
+                let annotsArray;
+                const existingAnnots = firstPage.node.get(PDFName.of('Annots'));
+
+                if (existingAnnots) {
+                    const lookedUp = pdfLibDoc.context.lookup(existingAnnots);
+                    if (lookedUp && lookedUp.asArray) {
+                        const existingRefs = lookedUp.asArray();
+                        annotsArray = pdfLibDoc.context.obj([...existingRefs, linkAnnotRef]);
+                    } else {
+                        annotsArray = pdfLibDoc.context.obj([linkAnnotRef]);
+                    }
+                } else {
+                    annotsArray = pdfLibDoc.context.obj([linkAnnotRef]);
+                }
+
+                firstPage.node.set(PDFName.of('Annots'), annotsArray);
+
+                console.log('='.repeat(60));
+                console.log('LINK ANNOTATION ADDED');
+                console.log('='.repeat(60));
+                console.log(`Position: x=${linkX}, y=${linkY}`);
+                console.log(`Size: ${linkWidth} x ${linkHeight}`);
+                console.log(`Target URL: ${targetUrl}`);
+                console.log('='.repeat(60));
+
+                const savedBytes = await pdfLibDoc.save();
+                modifiedPdfBytes = new Uint8Array(savedBytes);
+                await reloadPdf(new Uint8Array(modifiedPdfBytes));
+
+                showStatus('Link annotation added to page 1. Check console for details.', 'success');
+                downloadBtn.disabled = false;
+
+            } catch (error) {
+                console.error('Error adding Link annotation:', error);
+                showStatus('Error adding Link: ' + error.message, 'info');
+            }
+        }
+
+        // Reload PDF from bytes
+        async function reloadPdf(pdfBytes) {
+            const loadingTask = pdfjsLib.getDocument({ data: pdfBytes });
+            pdfDoc = await loadingTask.promise;
+            renderPage(pageNum);
+        }
+
+        // Download the modified PDF
+        function downloadModifiedPdf() {
+            if (!modifiedPdfBytes) return;
+
+            // Use a copy to avoid detached buffer issues
+            const blob = new Blob([new Uint8Array(modifiedPdfBytes)], { type: 'application/pdf' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'annotated-document.pdf';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            showStatus('Modified PDF downloaded!', 'success');
+        }
+
+        // Load PDF from file
+        async function loadPdf(file) {
+            const arrayBuffer = await file.arrayBuffer();
+            originalPdfBytes = new Uint8Array(arrayBuffer);
+            modifiedPdfBytes = null;
+
+            // Validate PDF header
+            const header = String.fromCharCode(...originalPdfBytes.slice(0, 5));
+            console.log('PDF Header check:', header, '| Expected: %PDF-');
+            console.log('PDF size:', originalPdfBytes.length, 'bytes');
+
+            if (!header.startsWith('%PDF')) {
+                showStatus('Warning: File does not appear to be a valid PDF (missing %PDF header)', 'info');
+                console.warn('Invalid PDF header. First 20 bytes:', originalPdfBytes.slice(0, 20));
+            }
+
+            const loadingTask = pdfjsLib.getDocument({ data: originalPdfBytes.slice() });
+
+            loadingTask.promise.then(function(pdf) {
+                pdfDoc = pdf;
+                pageNum = 1;
+
+                // Show the canvas container and controls
+                placeholder.style.display = 'none';
+                pdfPageContainer.style.display = 'inline-block';
+                pageControls.style.display = 'flex';
+
+                // Enable buttons
+                logAnnotationsBtn.disabled = false;
+                addHighlightBtn.disabled = false;
+                addTextBtn.disabled = false;
+                addFreetextBtn.disabled = false;
+                addLinkBtn.disabled = false;
+                downloadBtn.disabled = true; // Enable only after modifications
+
+                // Render first page
+                renderPage(pageNum);
+
+                showStatus(`Loaded: ${file.name} (${pdfDoc.numPages} pages)`, 'success');
+
+                // Automatically log annotations on load
+                console.log('');
+                console.log('PDF loaded. Scanning for existing annotations...');
+                logAnnotations();
+
+            }).catch(function(error) {
+                console.error('Error loading PDF:', error);
+                showStatus('Error loading PDF: ' + error.message, 'info');
+            });
+        }
+
+        // Event listeners
+        chooseFileBtn.addEventListener('click', () => fileInput.click());
+
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file && file.type === 'application/pdf') {
+                loadPdf(file);
+            } else if (file) {
+                showStatus('Please select a valid PDF file.', 'info');
+            }
+        });
+
+        logAnnotationsBtn.addEventListener('click', logAnnotations);
+        addHighlightBtn.addEventListener('click', addHighlightAnnotation);
+        addTextBtn.addEventListener('click', addTextAnnotation);
+        addFreetextBtn.addEventListener('click', addFreeTextAnnotation);
+        addLinkBtn.addEventListener('click', addLinkAnnotation);
+        downloadBtn.addEventListener('click', downloadModifiedPdf);
+        prevBtn.addEventListener('click', onPrevPage);
+        nextBtn.addEventListener('click', onNextPage);
+
+        // Log startup message
+        console.log('PDF Viewer with Annotations loaded.');
+        console.log('Select a PDF file to begin. Annotations will be logged to this console.');
+    </script>
+</body>
+</html>
