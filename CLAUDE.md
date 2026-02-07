@@ -43,6 +43,12 @@ The main active area. Three "smoke test" scripts and supporting plumbing:
 
 Traverses git commits from a given SHA, applies `mailmap.txt` to normalize author identities, emits JSON. The extensive comments describe a philosophy of treating git as a log/database and persisting commit chunks as JSON scalars.
 
+### Browser-based PDF annotations (`js_pdf_annotations/`)
+
+A standalone, server-free PDF viewer/annotator. Open `pdf-viewer.html` directly in a browser — no Python or build step needed. Uses PDF.js (rendering/reading annotations) and pdf-lib (creating/modifying annotations) via CDN. Supports highlight, text (sticky note), freetext, link, and stamp annotations. Includes sample PDFs (`glavel_receipt.pdf`, `annotated-document.pdf`).
+
+This is the pure-JS complement to the Qt-based `pdf_test.py` — the eventual goal is driving these annotations programmatically from Python/Excel via the QWebChannel bridge.
+
 ### Root-level D3/Angular demo (historical)
 
 `index.html` + `script.js` + `style.css` — AngularJS 1.x directive wrapping a D3 v3 bar chart. The original starting point of the repo.
