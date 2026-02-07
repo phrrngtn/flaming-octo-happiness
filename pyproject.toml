@@ -1,0 +1,13 @@
+[project]
+name = "flaming-octo-happiness"
+version = "0.1.0"
+description = "Python/Qt/JS integration experiments"
+requires-python = ">=3.13"
+dependencies = [
+    "PySide6",
+    "geopandas",
+    "folium",
+]
+
+[project.optional-dependencies]
+git-mining = ["pydriller"]
