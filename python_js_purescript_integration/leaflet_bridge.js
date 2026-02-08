@@ -9,10 +9,10 @@
  *   MainWorld  (helper below) — has access to Leaflet; communicates with
  *                               UserWorld via CustomEvents on the shared DOM
  *
- * Exposed API (callable from Python via runJavaScript in UserWorld):
- *   addOverlay(geojsonStr)          — add a GeoJSON layer to the map
- *   removeOverlays()                — remove all previously added overlays
- *   setOverlayStyle(styleJsonStr)   — change the default style for new layers
+ * Python→JS API (via QWebChannel signals on the Backend object):
+ *   addOverlayRequested(geojsonStr)       — add a GeoJSON layer to the map
+ *   removeOverlaysRequested()             — remove all previously added overlays
+ *   setOverlayStyleRequested(styleJsonStr) — change the default style for new layers
  */
 (function () {
     "use strict";
@@ -114,25 +114,25 @@
             backend.onMapEvent(JSON.stringify(e.detail));
         });
 
-        // Expose functions callable from Python via runJavaScript(code, UserWorld)
-        window.addOverlay = function (geojsonStr, styleStr) {
+        // Subscribe to Python signals via QWebChannel — no eval needed
+        backend.addOverlayRequested.connect(function (geojsonStr) {
             document.dispatchEvent(
                 new CustomEvent("__add_overlay__", {
-                    detail: { geojson: geojsonStr, style: styleStr || null },
+                    detail: { geojson: geojsonStr, style: null },
                 })
             );
-        };
+        });
 
-        window.removeOverlays = function () {
+        backend.removeOverlaysRequested.connect(function () {
             document.dispatchEvent(new CustomEvent("__remove_overlays__"));
-        };
+        });
 
-        window.setOverlayStyle = function (styleJsonStr) {
+        backend.setOverlayStyleRequested.connect(function (styleJsonStr) {
             document.dispatchEvent(
                 new CustomEvent("__set_style__", { detail: { style: styleJsonStr } })
             );
-        };
+        });
 
-        backend.log("Leaflet bridge ready — call addOverlay(geojsonStr) to add layers");
+        backend.log("Leaflet bridge ready — emit addOverlayRequested to add layers");
     });
 })();

@@ -22,9 +22,8 @@ import sys
 import threading
 from datetime import datetime
 from pathlib import Path
-from queue import Empty, Queue
 
-from PySide6.QtCore import QFile, QIODeviceBase, QObject, QTimer, QUrl, Slot
+from PySide6.QtCore import QFile, QIODeviceBase, QObject, QUrl, Signal, Slot
 from PySide6.QtWidgets import QApplication
 from PySide6.QtWebChannel import QWebChannel
 from PySide6.QtWebEngineCore import QWebEnginePage, QWebEngineScript, QWebEngineSettings
@@ -48,6 +47,11 @@ class ConsolePage(QWebEnginePage):
 # Backend — Python object exposed to UserWorld JS via QWebChannel
 # ---------------------------------------------------------------------------
 class Backend(QObject):
+    # Signals for Python → JS communication via QWebChannel
+    addOverlayRequested = Signal(str)
+    removeOverlaysRequested = Signal()
+    setOverlayStyleRequested = Signal(str)
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.ready = False
@@ -123,16 +127,23 @@ def load_geo_file(path_str):
         raise ValueError(f"Unsupported format: {ext} (expected .geojson, .json, or .shp)")
 
 
-def stdin_reader(cmd_queue):
-    """Background thread: read file paths from stdin, put on queue."""
+def stdin_loop(backend, app):
+    """Background thread: read file paths from stdin, load and send via signal."""
     while True:
         try:
             line = input("\n> Enter GeoJSON/Shapefile path: ").strip()
         except EOFError:
-            break
+            print("\n  EOF — quitting.", flush=True)
+            app.quit()
+            return
         if not line:
             continue
-        cmd_queue.put(line)
+        try:
+            geojson_str = load_geo_file(line)
+            backend.addOverlayRequested.emit(geojson_str)
+            print(f"  Injected: {line}", flush=True)
+        except Exception as e:
+            print(f"  Error: {e}", flush=True)
 
 
 # ---------------------------------------------------------------------------
@@ -203,41 +214,10 @@ def main():
     view.show()
 
     # --- Stdin reader thread ---------------------------------------------
-    cmd_queue = Queue()
-    reader = threading.Thread(target=stdin_reader, args=(cmd_queue,), daemon=True)
+    reader = threading.Thread(
+        target=stdin_loop, args=(backend, app), daemon=True
+    )
     reader.start()
-
-    # --- QTimer: poll command queue and inject GeoJSON --------------------
-    pending = []  # buffer commands until the bridge is ready
-
-    def process_commands():
-        # Drain queue into pending list
-        while True:
-            try:
-                pending.append(cmd_queue.get_nowait())
-            except Empty:
-                break
-
-        if not backend.ready or not pending:
-            return
-
-        # Process all pending commands
-        while pending:
-            path_str = pending.pop(0)
-            try:
-                geojson_str = load_geo_file(path_str)
-                # Call addOverlay() in UserWorld — defined by the extension JS
-                js_call = f"addOverlay({json.dumps(geojson_str)})"
-                page.runJavaScript(
-                    js_call, QWebEngineScript.ScriptWorldId.UserWorld
-                )
-                print(f"  Injected: {path_str}", flush=True)
-            except Exception as e:
-                print(f"  Error: {e}", flush=True)
-
-    timer = QTimer()
-    timer.timeout.connect(process_commands)
-    timer.start(100)
 
     sys.exit(app.exec())
 
