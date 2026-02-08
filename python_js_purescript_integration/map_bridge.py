@@ -108,9 +108,9 @@ def read_qwebchannel_js():
 
 
 def load_geo_file(path_str):
-    """Load a GeoJSON or Shapefile and return a GeoJSON string.
+    """Load a GeoJSON, Shapefile, or zipped Shapefile and return a GeoJSON string.
 
-    Supports .geojson, .json (read as-is) and .shp (converted via geopandas).
+    Supports .geojson/.json (read as-is), .shp, and .zip (via geopandas).
     """
     p = Path(path_str).expanduser().resolve()
     if not p.exists():
@@ -122,9 +122,17 @@ def load_geo_file(path_str):
     elif ext == ".shp":
         import geopandas as gpd
         gdf = gpd.read_file(str(p))
+        if gdf.crs and not gdf.crs.equals("EPSG:4326"):
+            gdf = gdf.to_crs(epsg=4326)
+        return gdf.to_json()
+    elif ext == ".zip":
+        import geopandas as gpd
+        gdf = gpd.read_file(f"zip://{p}")
+        if gdf.crs and not gdf.crs.equals("EPSG:4326"):
+            gdf = gdf.to_crs(epsg=4326)
         return gdf.to_json()
     else:
-        raise ValueError(f"Unsupported format: {ext} (expected .geojson, .json, or .shp)")
+        raise ValueError(f"Unsupported format: {ext} (expected .geojson, .json, .shp, or .zip)")
 
 
 def stdin_loop(backend, app):
