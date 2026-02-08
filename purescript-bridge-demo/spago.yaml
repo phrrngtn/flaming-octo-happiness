@@ -1,0 +1,44 @@
+workspace:
+  packageSet:
+    registry: 61.2.0
+  extraPackages:
+    hylograph-layout: "0.1.0"
+    hylograph-graph: "0.1.0"
+
+package:
+  name: bridge-demo
+  description: PureScript ↔ Qt WebEngine Bridge Demo
+  dependencies:
+    # Core
+    - prelude
+    - effect
+    - console
+    - aff
+    - maybe
+    - either
+    - arrays
+    - foldable-traversable
+    - refs
+    # JSON
+    - argonaut-core
+    - argonaut-codecs
+    # DOM (Stage 1)
+    - web-dom
+    - web-html
+    - web-events
+    - web-uievents
+    - foreign
+    # Halogen (Stage 2+)
+    - halogen
+    - halogen-subscriptions
+    # Stage 3
+    - ordered-collections
+    - integers
+    - strings
+    # Stage 4
+    - hylograph-layout
+    - numbers
+    - lists
+    - tree-rose
+    - tuples
+    - free

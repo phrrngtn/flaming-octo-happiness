@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Stage 1 — Vanilla PureScript Bridge</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      max-width: 600px;
+      margin: 40px auto;
+      padding: 0 20px;
+      background: #f8f7f4;
+      color: #333;
+    }
+    h1 { color: #2d5a27; font-size: 1.5rem; }
+    .buttons { display: flex; gap: 12px; margin: 20px 0; }
+    button {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 6px;
+      color: white;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    button:hover { opacity: 0.85; }
+    #btn-red { background: #c23b22; }
+    #btn-green { background: #2d5a27; }
+    #btn-blue { background: #1e3a5f; }
+    #status {
+      margin-top: 20px;
+      padding: 16px;
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      min-height: 24px;
+      color: #555;
+    }
+    .label { font-size: 0.85rem; color: #888; margin-bottom: 4px; }
+  </style>
+</head>
+<body>
+  <h1>Stage 1: Vanilla PureScript Bridge</h1>
+  <p>Click a button — the event goes PS → UserWorld → Python.<br>
+     Type JSON at the Python prompt to send commands back.</p>
+
+  <div class="buttons">
+    <button id="btn-red">Red</button>
+    <button id="btn-green">Green</button>
+    <button id="btn-blue">Blue</button>
+  </div>
+
+  <div class="label">Status (updated by Python commands):</div>
+  <div id="status">Waiting for commands...</div>
+
+  <script src="stage1-bundle.js"></script>
+</body>
+</html>
