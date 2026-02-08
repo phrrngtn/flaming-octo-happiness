@@ -48,7 +48,7 @@ class ConsolePage(QWebEnginePage):
 # ---------------------------------------------------------------------------
 class Backend(QObject):
     # Signals for Python → JS communication via QWebChannel
-    addOverlayRequested = Signal(str)
+    addOverlayRequested = Signal(str, str)
     removeOverlaysRequested = Signal()
     setOverlayStyleRequested = Signal(str)
 
@@ -73,10 +73,9 @@ class Backend(QObject):
             return
 
         etype = evt.get("type", "?")
-        props = evt.get("properties", {})
-        name = props.get("NAME_1") or props.get("name") or props.get("NAME", "")
-        ftype = props.get("TYPE_1") or props.get("type", "")
-        label = f"{name} ({ftype})" if ftype else name
+        name = evt.get("name", "")
+        code = evt.get("code", "")
+        label = f"{name} [{code}]" if code else name
 
         if etype == "click":
             lat, lng = evt.get("lat", "?"), evt.get("lng", "?")
@@ -87,7 +86,9 @@ class Backend(QObject):
             print(f"  [MAP {ts}] {etype}: {label}", flush=True)
         elif etype == "overlay_added":
             n = evt.get("featureCount", "?")
-            print(f"  [MAP {ts}] overlay added ({n} features)", flush=True)
+            ds = evt.get("label", "")
+            desc = f"{ds} ({n} features)" if ds else f"{n} features"
+            print(f"  [MAP {ts}] overlay added: {desc}", flush=True)
         elif etype == "error":
             print(f"  [MAP {ts}] ERROR: {evt.get('message', event_json)}", flush=True)
         else:
@@ -135,6 +136,73 @@ def load_geo_file(path_str):
         raise ValueError(f"Unsupported format: {ext} (expected .geojson, .json, .shp, or .zip)")
 
 
+def build_metadata(geojson_str, source_path):
+    """Build an overlay metadata dict with a property mapping for normalization.
+
+    Inspects the first feature's properties to map canonical keys to the
+    actual attribute names in this dataset.  Canonical keys:
+
+        name   — primary display name  (e.g. county, district, comarca)
+        code   — official identifier   (e.g. ISO code, ONS code)
+        type   — feature category      (e.g. "County", "City")
+        parent — parent admin unit     (e.g. country, province)
+
+    The JS side uses this mapping so that events sent back to Python always
+    carry the same canonical keys regardless of the source dataset.
+    """
+    data = json.loads(geojson_str)
+    features = data.get("features", [])
+    props = features[0].get("properties", {}) if features else {}
+    keys = list(props.keys())
+    keys_lower = {k: k.lower() for k in keys}
+
+    def _find(*patterns):
+        """Return the first property key whose lowercased form contains any pattern."""
+        for pat in patterns:
+            for k, kl in keys_lower.items():
+                if pat in kl:
+                    return k
+        return None
+
+    mapping = {}
+
+    def _find_suffix(*suffixes):
+        """Return the first property key whose lowercased form ends with a suffix."""
+        for suf in suffixes:
+            for k, kl in keys_lower.items():
+                if kl.endswith(suf):
+                    return k
+        return None
+
+    # name: the most important — display label for each feature
+    mapping["name"] = (
+        _find("name", "nom", "nombre")
+        or _find_suffix("nm")  # ONS convention: LAD13NM, etc.
+        # fall back to first non-null string property
+        or next((k for k in keys if isinstance(props[k], str) and props[k].strip()), None)
+    )
+
+    # code: administrative/reference identifier
+    mapping["code"] = (
+        _find("iso", "code", "hasc", "fips")
+        or _find_suffix("cd")  # ONS convention: LAD13CD, etc.
+    )
+
+    # type: feature classification
+    mapping["type"] = _find("type", "tipo", "engtype")
+
+    # parent: containing administrative unit
+    mapping["parent"] = _find("country", "province", "provincia", "region", "parent")
+
+    # strip None values
+    mapping = {k: v for k, v in mapping.items() if v is not None}
+
+    return {
+        "label": Path(source_path).stem,
+        "mapping": mapping,
+    }
+
+
 def stdin_loop(backend, app):
     """Background thread: read file paths from stdin, load and send via signal."""
     while True:
@@ -148,7 +216,9 @@ def stdin_loop(backend, app):
             continue
         try:
             geojson_str = load_geo_file(line)
-            backend.addOverlayRequested.emit(geojson_str)
+            metadata = build_metadata(geojson_str, line)
+            print(f"  Metadata: {json.dumps(metadata)}", flush=True)
+            backend.addOverlayRequested.emit(geojson_str, json.dumps(metadata))
             print(f"  Injected: {line}", flush=True)
         except Exception as e:
             print(f"  Error: {e}", flush=True)

@@ -10,7 +10,11 @@
  *                               UserWorld via CustomEvents on the shared DOM
  *
  * Python→JS API (via QWebChannel signals on the Backend object):
- *   addOverlayRequested(geojsonStr)       — add a GeoJSON layer to the map
+ *   addOverlayRequested(geojsonStr, metadataJsonStr)
+ *       Add a GeoJSON layer.  metadataJsonStr is a JSON object with:
+ *         label   — dataset name (e.g. "scottish_council_areas")
+ *         mapping — {canonical: actualPropertyName} for normalizing events
+ *                   canonical keys: name, code, type, parent
  *   removeOverlaysRequested()             — remove all previously added overlays
  *   setOverlayStyleRequested(styleJsonStr) — change the default style for new layers
  */
@@ -53,24 +57,39 @@
         "      var data = JSON.parse(e.detail.geojson);",
         "    } catch(err) { dispatch('error', {message:'Invalid GeoJSON: '+err}); return; }",
         "",
+        "    var meta = e.detail.metadata || {};",
+        "    var map_ = meta.mapping || {};",
+        "",
+        "    // Resolve canonical fields from raw properties using the mapping",
+        "    function resolve(props) {",
+        "      var out = {};",
+        "      for (var canon in map_) {",
+        "        var key = map_[canon];",
+        "        if (key && props[key] != null) out[canon] = props[key];",
+        "      }",
+        "      return out;",
+        "    }",
+        "",
         "    var layer = L.geoJSON(data, {",
         "      style: e.detail.style ? JSON.parse(e.detail.style) : defaultStyle,",
         "      onEachFeature: function (feature, lyr) {",
         "        var props = feature.properties || {};",
-        "        var name = props.NAME_1 || props.name || props.NAME || '';",
+        "        var norm = resolve(props);",
+        "        var name = norm.name || '';",
+        "        var subtitle = norm.type || norm.parent || '';",
         "        if (name) {",
-        "          lyr.bindPopup('<strong>' + name + '</strong><br>' + (props.TYPE_1||props.type||''));",
+        "          lyr.bindPopup('<strong>' + name + '</strong>' + (subtitle ? '<br>' + subtitle : ''));",
         "          lyr.bindTooltip(name);",
         "        }",
         "        lyr.on('click', function (ev) {",
-        "          dispatch('click', {properties:props, lat:ev.latlng.lat, lng:ev.latlng.lng});",
+        "          dispatch('click', Object.assign({}, norm, {lat:ev.latlng.lat, lng:ev.latlng.lng}));",
         "        });",
         "        lyr.on('mouseover', function () {",
-        "          dispatch('mouseover', {properties:props});",
+        "          dispatch('mouseover', norm);",
         "          lyr.setStyle({weight:4, fillOpacity:0.4});",
         "        });",
         "        lyr.on('mouseout', function () {",
-        "          dispatch('mouseout', {properties:props});",
+        "          dispatch('mouseout', norm);",
         "          lyr.setStyle(e.detail.style ? JSON.parse(e.detail.style) : defaultStyle);",
         "        });",
         "      }",
@@ -79,6 +98,7 @@
         "    layers.push(layer);",
         "    m.fitBounds(layer.getBounds());",
         "    dispatch('overlay_added', {",
+        "      label: meta.label || '',",
         "      featureCount: data.features ? data.features.length : 0,",
         "      layerIndex: layers.length - 1",
         "    });",
@@ -115,10 +135,16 @@
         });
 
         // Subscribe to Python signals via QWebChannel — no eval needed
-        backend.addOverlayRequested.connect(function (geojsonStr) {
+        backend.addOverlayRequested.connect(function (geojsonStr, metadataJsonStr) {
+            var metadata = {};
+            try { metadata = JSON.parse(metadataJsonStr); } catch (e) {}
             document.dispatchEvent(
                 new CustomEvent("__add_overlay__", {
-                    detail: { geojson: geojsonStr, style: null },
+                    detail: {
+                        geojson: geojsonStr,
+                        style: null,
+                        metadata: metadata,
+                    },
                 })
             );
         });
