@@ -1,6 +1,6 @@
 workspace:
   packageSet:
-    registry: 61.2.0
+    registry: 77.13.1
   extraPackages:
     hylograph-layout: "0.1.0"
     hylograph-graph: "0.1.0"
